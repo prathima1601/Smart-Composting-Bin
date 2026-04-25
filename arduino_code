@@ -1,0 +1,159 @@
+#include <SoftwareSerial.h>
+#include "HX711.h"
+#include <Servo.h>
+#include <LiquidCrystal_I2C.h>
+#include <DHT.h>
+LiquidCrystal_I2C lcd(0x27,16,2);
+HX711 scale;
+uint8_t dataPin  = 2;//for esp32
+uint8_t clockPin = 3;//for esp32
+const int button = A1;
+const int ms = A3;
+const int pump = 10;
+const int bz = 5;
+#define DHT_SENSOR_PIN  4
+#define DHT_SENSOR_TYPE DHT11
+DHT dht_sensor(DHT_SENSOR_PIN, DHT_SENSOR_TYPE);
+int i=0,x=0,st=0,MS;
+float wt = 0;
+Servo myservo1;
+void setup()
+{
+  Serial.begin(9600);
+  Serial.println(HX711_LIB_VERSION);
+  pinMode(button,INPUT);
+  pinMode(ms,INPUT);
+  pinMode(pump,OUTPUT);
+  pinMode(bz,LOW);
+  digitalWrite(pump,LOW);
+  digitalWrite(bz,LOW);
+  Serial.println("welcome");
+  lcd.init();
+  lcd.clear();        
+  lcd.backlight();    
+  lcd.setCursor(2,0);
+  lcd.print("WELCOME TO ");
+  lcd.setCursor(2,1); 
+  lcd.print("LOAD CELL");
+  myservo1.attach(9);
+  myservo1.write(0);
+  delay(2000);
+  myservo1.write(90);
+  delay(2000);
+  myservo1.write(0);
+  lcd.clear();
+  scale.begin(dataPin, clockPin);
+  //Serial.print("GET VALUES");
+  //Serial.println(scale.get_units(10));
+  lcd.setCursor(0,0);
+  lcd.print("GET VALUES ");
+  lcd.setCursor(0,1);
+  lcd.print("units="); 
+  lcd.print(scale.get_units(10));
+  delay(100);
+  scale.tare();
+  //Serial.print("UNITS: ");
+  //lcd.print("units=");
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("EMPTY THE TRAY ");
+  delay(2000);
+  lcd.setCursor(0,1);
+  lcd.print("units="); 
+  lcd.print(scale.get_units(10));
+  delay(100);
+  lcd.clear();
+ 
+  lcd.setCursor(2,0);
+  lcd.print("PUT 1000 GRMS");
+  delay(2000);
+  lcd.print(scale.get_units(10));
+  lcd.setCursor(0,1);
+  lcd.clear();
+ // Serial.println(scale.get_units(10));
+  //Serial.println("\nPut 1000 gram in the scale, press a key to continue");
+  scale.calibrate_scale(1000, 5);
+ // Serial.print("UNITS: ");
+ // Serial.println(scale.get_units(10));
+  lcd.setCursor(0,0);
+  lcd.print("units=");
+  lcd.print(scale.get_units(10));
+ // Serial.print(scale.get_units(10));
+ delay(2000);
+ lcd.clear();
+ scale.set_unit_price(0.031415);   //  we only have one price
+ dht_sensor.begin();
+}
+void loop()
+{
+  x = digitalRead(button);
+  int humi  = dht_sensor.readHumidity();    // read humidity
+  int tempC = dht_sensor.readTemperature();
+  MS =  analogRead(ms);
+  MS = map(MS,0,1024,100,0);
+  //Serial.print("UNITS: ");
+ // Serial.println(scale.get_units(10));
+  wt = scale.get_units(10);
+  delay(250);
+  lcd.setCursor(0,0);
+  lcd.print("T = ");
+  lcd.print(tempC);
+  lcd.print(" H = ");
+  lcd.print(humi);
+  lcd.print("  ");
+  lcd.setCursor(0,1);
+  lcd.print("MS=");
+  lcd.print(MS);
+  lcd.print(" LD=");
+  lcd.print(wt);
+  lcd.print("Grms");
+  if(tempC > 38)
+  {
+    digitalWrite(bz,HIGH);
+  }
+  else
+  {
+    digitalWrite(bz,LOW);
+  }
+  if((MS < 50)&&(wt > 50))
+  {
+    digitalWrite(pump,HIGH);
+    delay(1000);
+  }
+  else
+  {
+   digitalWrite(pump,LOW);
+  }
+  if((wt > 50)&&(st > 2))
+  {
+  lcd.setCursor(0,1);
+  lcd.print("COMPOST PROCESS  ");
+  for(i=0;i<60;i++)
+  {
+  myservo1.write(0);
+  delay(2000);
+  myservo1.write(180);
+  delay(2000);
+  }
+  lcd.setCursor(0,1);
+  lcd.print("PROCESS STOP");
+  delay(1000);
+  lcd.setCursor(0,1);
+  lcd.print("COMPOST READY");
+  delay(3000);
+  lcd.clear();
+  st = 0;
+  }
+  if(x == LOW)
+  {
+  lcd.setCursor(11,1);
+  lcd.print("WAIT  ");
+  st = 5;
+  delay(2000);
+  }
+  else
+  {
+  //lcd.setCursor(0,1);
+  //lcd.print("PRESS TO START ");
+  }
+} is both the codes same which is better
